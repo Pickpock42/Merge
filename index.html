@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Merge Gun Factory</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <div class="stat">💰 <span id="money">0</span></div>
+      <div class="stat">🌊 <span id="wave">1</span></div>
+      <div class="stat">❤️ <span id="lives">3</span></div>
+      <button id="boostBtn" class="btn small">x2 Boost</button>
+    </header>
+
+    <main>
+      <canvas id="gameCanvas" width="540" height="960"></canvas>
+    </main>
+
+    <footer class="bottom-bar">
+      <button id="buyBtn" class="btn primary">Купить (<span id="buyCost">0</span>)</button>
+      <div class="upgrades">
+        <button id="incomeUpgradeBtn" class="btn">+20% доход (<span id="incomeCost">0</span>)</button>
+        <button id="fireUpgradeBtn" class="btn">+15% скор. огня (<span id="fireCost">0</span>)</button>
+        <button id="startLevelUpgradeBtn" class="btn">+1 старт. lvl (<span id="startLevelCost">0</span>)</button>
+      </div>
+    </footer>
+  </div>
+
+  <script src="units.js"></script>
+  <script src="grid.js"></script>
+  <script src="enemy.js"></script>
+  <script src="economy.js"></script>
+  <script src="storage.js"></script>
+  <script src="ui.js"></script>
+  <script src="game.js"></script>
+  <script src="main.js"></script>
+</body>
+</html>
