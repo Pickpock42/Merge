@@ -1,5 +1,5 @@
-export class Enemy {
-  constructor() {
+(function () {
+  function Enemy() {
     this.active = false;
     this.hp = 1;
     this.maxHp = 1;
@@ -8,21 +8,21 @@ export class Enemy {
     this.y = 0;
   }
 
-  spawn({ hp, speed, x, y }) {
+  Enemy.prototype.spawn = function (cfg) {
     this.active = true;
-    this.hp = hp;
-    this.maxHp = hp;
-    this.speed = speed;
-    this.x = x;
-    this.y = y;
-  }
+    this.hp = cfg.hp;
+    this.maxHp = cfg.hp;
+    this.speed = cfg.speed;
+    this.x = cfg.x;
+    this.y = cfg.y;
+  };
 
-  update(dt) {
+  Enemy.prototype.update = function (dt) {
     if (!this.active) return;
     this.x += this.speed * dt;
-  }
+  };
 
-  takeDamage(amount) {
+  Enemy.prototype.takeDamage = function (amount) {
     if (!this.active) return false;
     this.hp -= amount;
     if (this.hp <= 0) {
@@ -30,19 +30,21 @@ export class Enemy {
       return true;
     }
     return false;
-  }
-}
+  };
 
-export class EnemyPool {
-  constructor(size = 10) {
-    this.pool = Array.from({ length: size }, () => new Enemy());
+  function EnemyPool(size) {
+    this.pool = Array.from({ length: size || 10 }, function () { return new Enemy(); });
   }
 
-  acquire() {
-    return this.pool.find((enemy) => !enemy.active) || null;
-  }
+  EnemyPool.prototype.acquire = function () {
+    for (var i = 0; i < this.pool.length; i += 1) if (!this.pool[i].active) return this.pool[i];
+    return null;
+  };
 
-  getActive() {
-    return this.pool.filter((enemy) => enemy.active);
-  }
-}
+  EnemyPool.prototype.getActive = function () {
+    return this.pool.filter(function (enemy) { return enemy.active; });
+  };
+
+  window.MGF = window.MGF || {};
+  window.MGF.EnemyPool = EnemyPool;
+})();

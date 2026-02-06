@@ -1,10 +1,7 @@
-import Game from './game.js';
-
-const canvas = document.getElementById('gameCanvas');
-const game = new Game(canvas);
-
-game.start();
-
-window.addEventListener('beforeunload', () => {
-  game.handleBeforeUnload();
-});
+(function () {
+  var Game = window.MGF.Game;
+  var canvas = document.getElementById('gameCanvas');
+  var game = new Game(canvas);
+  game.start();
+  window.addEventListener('beforeunload', function () { game.handleBeforeUnload(); });
+})();

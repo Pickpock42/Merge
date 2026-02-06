@@ -1,26 +1,28 @@
-const STORAGE_KEY = 'mergeGunFactorySave';
+(function () {
+  var STORAGE_KEY = 'mergeGunFactorySave';
 
-export function saveGame(state) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-export function loadGame() {
-  const raw = localStorage.getItem(STORAGE_KEY);
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw);
-  } catch (e) {
-    return null;
+  function saveGame(state) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }
-}
 
-export function markExitTimestamp() {
-  localStorage.setItem(`${STORAGE_KEY}_exitTs`, `${Date.now()}`);
-}
+  function loadGame() {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch (e) { return null; }
+  }
 
-export function getOfflineSeconds(maxHours = 3) {
-  const raw = localStorage.getItem(`${STORAGE_KEY}_exitTs`);
-  if (!raw) return 0;
-  const diffSec = Math.max(0, (Date.now() - Number(raw)) / 1000);
-  return Math.min(diffSec, maxHours * 3600);
-}
+  function markExitTimestamp() {
+    localStorage.setItem(STORAGE_KEY + '_exitTs', String(Date.now()));
+  }
+
+  function getOfflineSeconds(maxHours) {
+    var limitH = maxHours || 3;
+    var raw = localStorage.getItem(STORAGE_KEY + '_exitTs');
+    if (!raw) return 0;
+    var diffSec = Math.max(0, (Date.now() - Number(raw)) / 1000);
+    return Math.min(diffSec, limitH * 3600);
+  }
+
+  window.MGF = window.MGF || {};
+  window.MGF.storage = { saveGame: saveGame, loadGame: loadGame, markExitTimestamp: markExitTimestamp, getOfflineSeconds: getOfflineSeconds };
+})();
