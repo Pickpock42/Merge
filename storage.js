@@ -9,7 +9,7 @@ export function loadGame() {
   if (!raw) return null;
   try {
     return JSON.parse(raw);
-  } catch {
+  } catch (e) {
     return null;
   }
 }

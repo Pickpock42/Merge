@@ -34,62 +34,72 @@ export default class Game {
     };
 
     this.layout = {
-      padding: 24,
-      gridTop: 180,
-      cellSize: 0,
+      padding: 20,
+      gridTop: 24,
+      cellSize: 48,
     };
+
+    this.boundLoop = this.loop.bind(this);
 
     this.setupCanvasScale();
     this.registerInput();
     this.ui.bind(this);
     this.load();
     this.applyOfflineIncome();
+    this.ui.render(this);
   }
 
   setupCanvasScale() {
-    const dpr = window.devicePixelRatio || 1;
-    const rect = this.canvas.getBoundingClientRect();
-    this.canvas.width = Math.floor(rect.width * dpr);
-    this.canvas.height = Math.floor(rect.height * dpr);
+    var dpr = window.devicePixelRatio || 1;
+    var rect = this.canvas.getBoundingClientRect();
+    var cssWidth = Math.max(1, Math.floor(rect.width || this.canvas.clientWidth || 360));
+    var cssHeight = Math.max(1, Math.floor(rect.height || this.canvas.clientHeight || 640));
+
+    this.canvas.width = Math.floor(cssWidth * dpr);
+    this.canvas.height = Math.floor(cssHeight * dpr);
     this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const availableW = rect.width - this.layout.padding * 2;
-    const availableH = rect.height - this.layout.gridTop - this.layout.padding;
-    this.layout.cellSize = Math.min(availableW / this.gridCols, availableH / this.gridRows);
+    var availableW = cssWidth - this.layout.padding * 2;
+    var availableH = cssHeight - this.layout.gridTop - this.layout.padding;
+    this.layout.cellSize = Math.max(24, Math.min(availableW / this.gridCols, availableH / this.gridRows));
   }
 
   registerInput() {
-    window.addEventListener('resize', () => this.setupCanvasScale());
+    var self = this;
 
-    const start = (ev) => {
+    window.addEventListener('resize', function () {
+      self.setupCanvasScale();
+    });
+
+    var start = function (ev) {
       ev.preventDefault();
-      const p = this.getPoint(ev);
-      const idx = this.cellByPoint(p.x, p.y);
-      if (idx < 0 || !this.grid.cells[idx]) return;
-      this.drag.active = true;
-      this.drag.from = idx;
-      this.drag.pointerX = p.x;
-      this.drag.pointerY = p.y;
+      var p = self.getPoint(ev);
+      var idx = self.cellByPoint(p.x, p.y);
+      if (idx < 0 || !self.grid.cells[idx]) return;
+      self.drag.active = true;
+      self.drag.from = idx;
+      self.drag.pointerX = p.x;
+      self.drag.pointerY = p.y;
     };
 
-    const move = (ev) => {
-      if (!this.drag.active) return;
+    var move = function (ev) {
+      if (!self.drag.active) return;
       ev.preventDefault();
-      const p = this.getPoint(ev);
-      this.drag.pointerX = p.x;
-      this.drag.pointerY = p.y;
+      var p = self.getPoint(ev);
+      self.drag.pointerX = p.x;
+      self.drag.pointerY = p.y;
     };
 
-    const end = (ev) => {
-      if (!this.drag.active) return;
+    var end = function (ev) {
+      if (!self.drag.active) return;
       ev.preventDefault();
-      const p = this.getPoint(ev);
-      const to = this.cellByPoint(p.x, p.y);
+      var p = self.getPoint(ev);
+      var to = self.cellByPoint(p.x, p.y);
       if (to >= 0) {
-        this.grid.moveOrMerge(this.drag.from, to, this.economy.fireRateBoost);
+        self.grid.moveOrMerge(self.drag.from, to, self.economy.fireRateBoost);
       }
-      this.drag.active = false;
-      this.drag.from = -1;
+      self.drag.active = false;
+      self.drag.from = -1;
     };
 
     this.canvas.addEventListener('mousedown', start);
@@ -99,32 +109,40 @@ export default class Game {
     this.canvas.addEventListener('touchstart', start, { passive: false });
     this.canvas.addEventListener('touchmove', move, { passive: false });
     window.addEventListener('touchend', end, { passive: false });
+    window.addEventListener('touchcancel', end, { passive: false });
   }
 
   getPoint(ev) {
-    const rect = this.canvas.getBoundingClientRect();
-    const touch = ev.touches?.[0] || ev.changedTouches?.[0];
-    const clientX = touch ? touch.clientX : ev.clientX;
-    const clientY = touch ? touch.clientY : ev.clientY;
+    var rect = this.canvas.getBoundingClientRect();
+    var touch = null;
+    if (ev.touches && ev.touches.length) touch = ev.touches[0];
+    else if (ev.changedTouches && ev.changedTouches.length) touch = ev.changedTouches[0];
+
+    var clientX = touch ? touch.clientX : ev.clientX;
+    var clientY = touch ? touch.clientY : ev.clientY;
+
     return {
-      x: clientX - rect.left,
-      y: clientY - rect.top,
+      x: (clientX || 0) - rect.left,
+      y: (clientY || 0) - rect.top,
     };
   }
 
   cellByPoint(x, y) {
-    const { padding, gridTop, cellSize } = this.layout;
+    var padding = this.layout.padding;
+    var gridTop = this.layout.gridTop;
+    var cellSize = this.layout.cellSize;
     if (x < padding || y < gridTop) return -1;
-    const col = Math.floor((x - padding) / cellSize);
-    const row = Math.floor((y - gridTop) / cellSize);
+    var col = Math.floor((x - padding) / cellSize);
+    var row = Math.floor((y - gridTop) / cellSize);
     if (col < 0 || row < 0 || col >= this.gridCols || row >= this.gridRows) return -1;
     return this.grid.index(col, row);
   }
 
   buyUnit() {
+    var price = this.economy.buyCost;
     if (!this.economy.buyUnit()) return;
     if (!this.grid.placeNewUnit(this.economy.buyStartLevel, this.economy.fireRateBoost)) {
-      this.economy.addMoney(this.economy.buyCost);
+      this.economy.addMoney(price);
       this.economy.totalBought = Math.max(0, this.economy.totalBought - 1);
     }
   }
@@ -134,15 +152,14 @@ export default class Game {
   }
 
   buyUpgrade(type) {
-    const oldBoost = this.economy.fireRateBoost;
+    var oldBoost = this.economy.fireRateBoost;
     if (!this.economy.applyUpgrade(type)) return;
     if (type === 'fire') {
-      const ratio = (1 + oldBoost) / (1 + this.economy.fireRateBoost);
-      this.grid.cells.forEach((unit) => {
-        if (unit) {
-          unit.fireRate *= ratio;
-          unit.cooldown = Math.min(unit.cooldown, unit.fireRate);
-        }
+      var ratio = (1 + oldBoost) / (1 + this.economy.fireRateBoost);
+      this.grid.cells.forEach(function (unit) {
+        if (!unit) return;
+        unit.fireRate *= ratio;
+        unit.cooldown = Math.min(unit.cooldown, unit.fireRate);
       });
     }
   }
@@ -151,34 +168,40 @@ export default class Game {
     this.spawnTimer -= dt;
     if (this.spawnTimer > 0) return;
 
-    const active = this.enemyPool.getActive();
+    var active = this.enemyPool.getActive();
     if (active.length >= 3) return;
 
-    const enemy = this.enemyPool.acquire();
+    var enemy = this.enemyPool.acquire();
     if (!enemy) return;
 
-    const lane = Math.floor(Math.random() * this.gridRows);
-    const y = this.layout.gridTop + this.layout.cellSize * (lane + 0.5);
+    var lane = Math.floor(Math.random() * this.gridRows);
+    var y = this.layout.gridTop + this.layout.cellSize * (lane + 0.5);
     enemy.spawn({
       hp: this.enemyHp,
       speed: 22 + this.wave * 2,
       x: -20,
-      y,
+      y: y,
     });
     this.spawnTimer = this.spawnInterval;
   }
 
   unitsShoot(dt) {
-    const active = this.enemyPool.getActive();
+    var active = this.enemyPool.getActive();
     if (!active.length) return;
 
-    for (const unit of this.grid.cells) {
+    for (var i = 0; i < this.grid.cells.length; i += 1) {
+      var unit = this.grid.cells[i];
       if (!unit) continue;
       unit.cooldown -= dt;
       if (unit.cooldown > 0) continue;
       unit.cooldown = unit.fireRate;
-      const target = active.reduce((a, b) => (a.x > b.x ? a : b));
-      const dead = target.takeDamage(unit.damage);
+
+      var target = active[0];
+      for (var j = 1; j < active.length; j += 1) {
+        if (active[j].x > target.x) target = active[j];
+      }
+
+      var dead = target.takeDamage(unit.damage);
       if (dead) {
         this.economy.addMoney(this.economy.enemyReward(target.maxHp));
       }
@@ -186,19 +209,20 @@ export default class Game {
   }
 
   updateEnemies(dt) {
-    const rect = this.canvas.getBoundingClientRect();
-    const maxX = rect.width + 20;
+    var maxX = Math.max(360, this.canvas.clientWidth || this.canvas.getBoundingClientRect().width) + 20;
 
-    this.enemyPool.getActive().forEach((enemy) => {
-      enemy.update(dt);
-      if (enemy.x > maxX) {
-        enemy.active = false;
-        this.lives -= 1;
-        if (this.lives <= 0) {
-          this.resetWavePenalty();
+    this.enemyPool.getActive().forEach(
+      function (enemy) {
+        enemy.update(dt);
+        if (enemy.x > maxX) {
+          enemy.active = false;
+          this.lives -= 1;
+          if (this.lives <= 0) {
+            this.resetWavePenalty();
+          }
         }
-      }
-    });
+      }.bind(this)
+    );
 
     if (this.enemyPool.getActive().length === 0) {
       this.wave += 1;
@@ -210,16 +234,20 @@ export default class Game {
     this.lives = 3;
     this.wave = Math.max(1, this.wave - 1);
     this.enemyHp = Math.max(30, this.enemyHp / 1.12);
-    this.enemyPool.pool.forEach((enemy) => {
+    this.enemyPool.pool.forEach(function (enemy) {
       enemy.active = false;
     });
   }
 
   applyOfflineIncome() {
-    const offlineSec = getOfflineSeconds(3);
+    var offlineSec = getOfflineSeconds(3);
     if (offlineSec <= 1) return;
-    const dps = this.grid.cells.reduce((sum, unit) => sum + (unit ? unit.damage / Math.max(unit.fireRate, 0.1) : 0), 0);
-    const estimatedReward = dps * offlineSec * 0.08 * this.economy.incomeMultiplier;
+
+    var dps = this.grid.cells.reduce(function (sum, unit) {
+      return sum + (unit ? unit.damage / Math.max(unit.fireRate, 0.1) : 0);
+    }, 0);
+
+    var estimatedReward = dps * offlineSec * 0.08 * this.economy.incomeMultiplier;
     this.economy.addMoney(Math.floor(estimatedReward));
   }
 
@@ -236,9 +264,12 @@ export default class Game {
   }
 
   render() {
-    const ctx = this.ctx;
-    const rect = this.canvas.getBoundingClientRect();
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    if (this.layout.cellSize <= 0) this.setupCanvasScale();
+
+    var ctx = this.ctx;
+    var width = Math.max(1, this.canvas.clientWidth || this.canvas.getBoundingClientRect().width);
+    var height = Math.max(1, this.canvas.clientHeight || this.canvas.getBoundingClientRect().height);
+    ctx.clearRect(0, 0, width, height);
 
     this.drawGrid(ctx);
     this.drawUnits(ctx);
@@ -248,14 +279,18 @@ export default class Game {
   }
 
   drawGrid(ctx) {
-    const { padding, gridTop, cellSize } = this.layout;
-    ctx.strokeStyle = '#334166';
+    var padding = this.layout.padding;
+    var gridTop = this.layout.gridTop;
+    var cellSize = this.layout.cellSize;
+
+    ctx.strokeStyle = '#4f6499';
     ctx.lineWidth = 1;
-    for (let r = 0; r < this.gridRows; r += 1) {
-      for (let c = 0; c < this.gridCols; c += 1) {
-        const x = padding + c * cellSize;
-        const y = gridTop + r * cellSize;
-        ctx.fillStyle = '#1a2236';
+
+    for (var r = 0; r < this.gridRows; r += 1) {
+      for (var c = 0; c < this.gridCols; c += 1) {
+        var x = padding + c * cellSize;
+        var y = gridTop + r * cellSize;
+        ctx.fillStyle = '#162340';
         ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
         ctx.strokeRect(x, y, cellSize, cellSize);
       }
@@ -263,28 +298,32 @@ export default class Game {
   }
 
   drawUnits(ctx) {
-    const { padding, gridTop, cellSize } = this.layout;
+    var padding = this.layout.padding;
+    var gridTop = this.layout.gridTop;
+    var cellSize = this.layout.cellSize;
+
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    this.grid.cells.forEach((unit, i) => {
-      if (!unit) return;
-      if (this.drag.active && this.drag.from === i) return;
-      const { col, row } = this.grid.toCell(i);
-      const x = padding + col * cellSize + cellSize / 2;
-      const y = gridTop + row * cellSize + cellSize / 2;
-      this.drawUnitSprite(ctx, unit, x, y, cellSize * 0.38);
-    });
+    for (var i = 0; i < this.grid.cells.length; i += 1) {
+      var unit = this.grid.cells[i];
+      if (!unit) continue;
+      if (this.drag.active && this.drag.from === i) continue;
+      var pos = this.grid.toCell(i);
+      var x = padding + pos.col * cellSize + cellSize / 2;
+      var y = gridTop + pos.row * cellSize + cellSize / 2;
+      this.drawUnitSprite(ctx, unit, x, y, cellSize * 0.38, 1);
+    }
 
     if (this.drag.active) {
-      const unit = this.grid.cells[this.drag.from];
-      if (unit) {
-        this.drawUnitSprite(ctx, unit, this.drag.pointerX, this.drag.pointerY, cellSize * 0.4, 0.85);
+      var dragUnit = this.grid.cells[this.drag.from];
+      if (dragUnit) {
+        this.drawUnitSprite(ctx, dragUnit, this.drag.pointerX, this.drag.pointerY, cellSize * 0.4, 0.85);
       }
     }
   }
 
-  drawUnitSprite(ctx, unit, x, y, radius, alpha = 1) {
+  drawUnitSprite(ctx, unit, x, y, radius, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.fillStyle = unitColor(unit.level);
@@ -292,36 +331,35 @@ export default class Game {
     ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#0e1020';
-    ctx.font = `bold ${Math.max(12, radius * 0.7)}px sans-serif`;
-    ctx.fillText(`${unit.level}`, x, y);
+    ctx.font = 'bold ' + Math.max(12, Math.floor(radius * 0.7)) + 'px sans-serif';
+    ctx.fillText(String(unit.level), x, y);
     ctx.restore();
   }
 
   drawEnemies(ctx) {
-    ctx.textAlign = 'left';
-    this.enemyPool.getActive().forEach((enemy) => {
+    this.enemyPool.getActive().forEach(function (enemy) {
       ctx.fillStyle = '#ff5a6d';
       ctx.fillRect(enemy.x - 14, enemy.y - 12, 28, 24);
       ctx.fillStyle = '#111';
       ctx.fillRect(enemy.x - 14, enemy.y - 18, 28, 4);
       ctx.fillStyle = '#71ff90';
-      const ratio = Math.max(0, enemy.hp / enemy.maxHp);
+      var ratio = Math.max(0, enemy.hp / enemy.maxHp);
       ctx.fillRect(enemy.x - 14, enemy.y - 18, 28 * ratio, 4);
     });
   }
 
-  loop = (timestamp) => {
+  loop(timestamp) {
     if (!this.lastTime) this.lastTime = timestamp;
-    const dt = Math.min(0.05, (timestamp - this.lastTime) / 1000);
+    var dt = Math.min(0.05, (timestamp - this.lastTime) / 1000);
     this.lastTime = timestamp;
 
     this.update(dt);
     this.render();
-    requestAnimationFrame(this.loop);
-  };
+    requestAnimationFrame(this.boundLoop);
+  }
 
   start() {
-    requestAnimationFrame(this.loop);
+    requestAnimationFrame(this.boundLoop);
   }
 
   save() {
@@ -335,20 +373,28 @@ export default class Game {
   }
 
   load() {
-    const saved = loadGame();
+    var saved = loadGame();
     if (!saved) {
+      this.grid.placeNewUnit(1, this.economy.fireRateBoost);
       this.grid.placeNewUnit(1, this.economy.fireRateBoost);
       return;
     }
 
-    this.economy.load(saved.economy);
+    this.economy.load(saved.economy || {});
     this.grid.load(saved.grid, this.economy.fireRateBoost);
     this.wave = saved.wave || 1;
     this.lives = saved.lives || 3;
     this.enemyHp = saved.enemyHp || 30;
 
-    // Коррекция юнитов после загрузки под текущий бонус скорости.
-    this.grid.cells = this.grid.cells.map((unit) => (unit ? createUnit(unit.level, this.economy.fireRateBoost) : null));
+    this.grid.cells = this.grid.cells.map(
+      function (unit) {
+        return unit ? createUnit(unit.level, this.economy.fireRateBoost) : null;
+      }.bind(this)
+    );
+
+    if (!this.grid.cells.some(function (u) { return !!u; })) {
+      this.grid.placeNewUnit(1, this.economy.fireRateBoost);
+    }
   }
 
   handleBeforeUnload() {
